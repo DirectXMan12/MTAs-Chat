@@ -191,7 +191,7 @@ function scrollDown () {
 //the event may be a msg, join or part type
 //from is the user, text is the body and time is the timestamp, defaulting to now
 //_class is a css class to apply to the message, usefull for system events
-function addMessage (from, text, time, _class) {
+function addMessage (from, text, time, _class, sanitize) {
   if (text === null)
     return;
 
@@ -214,7 +214,7 @@ function addMessage (from, text, time, _class) {
     messageElement.addClass(_class);
 
   // sanitize
-  text = util.toStaticHTML(text);
+  if (sanitize != false) text = util.toStaticHTML(text);
 
   // If the current user said this, add a special css class
   var nick_re = new RegExp(CONFIG.nick);
@@ -257,6 +257,95 @@ function updateUptime () {
 var transmission_errors = 0;
 var first_poll = true;
 
+function is_special_action(message)
+{
+  if (message.charAt(0) == '/') return true;
+  else return false;
+}
+
+function process_special_action(message)
+{
+  if (message.substr(0,5) == '/roll')
+  {
+    var text = "/roll rolled ";
+    var parsed_dice = message.match(/([1-9]\d*)?d([1-9]\d*)?/);
+    var success_min = message.match(/diff:([1-9]|(10))/) || ["6","6"];
+    var dice = {num: parseInt(parsed_dice[1]), sides: parseInt(parsed_dice[2] || "10"), difficulty: parseInt(success_min[1])};
+    
+    text += dice.num + "d" + dice.sides + " at difficulty " + dice.difficulty + " for ";
+
+    var dice_res = [];
+    for (var i = 0; i < dice.num; i++)
+    {
+    	var roll_res = Math.round((Math.random()*(dice.sides-1))+1);
+	dice_res.push(roll_res);
+	if (roll_res == 10) i--;
+    }
+
+    var successes = 0;
+    var success_array = [];
+    var botch = 0;
+
+    for (var i = 0; i < dice_res.length; i++)
+    {
+      if (dice_res[i] > dice.difficulty) { successes++; success_array[i] = 1; botch = -1; }
+      else if (dice_res[i] == 1 && dice_res[i-1] != 10)
+      {
+	successes--;
+	success_array[i] = -1;
+        if (botch == 0) botch = 1;
+      }
+      else success_array[i] = 0;
+    }
+
+    if (successes == 1) text += "1 success: ";
+    else if (successes < 1 && botch == 1) text += "a botch: "; 
+    else if (successes < 1) text += "0 successes: ";
+    else text += successes + " successes: ";
+    
+    for (var i = 0; i < dice_res.length; i++)
+    {
+      text += "<span class=\"dice ";
+      if (success_array[i] == -1) text += "failure\">" + dice_res[i] + "</span>";
+      else if (success_array[i] == 1 && dice_res[i] == 10) text += "great success\">" + dice_res[i] + "</span>";
+      else if (success_array[i] == 1) text += "success\">" + dice_res[i] + "</span>";
+      else text += "non_success\">" + dice_res[i] + "</span>";
+      text += "&nbsp;";
+    }
+
+    return text; 
+  }
+  else return message;
+
+}
+
+function handle_special_action(message)
+{
+  var processed_msg = message.text; 
+  var sanitize_before = false;
+
+  if (processed_msg.indexOf("\"") != -1)
+  {
+    processed_msg = util.toStaticHTML(processed_msg);
+    var quote_region = processed_msg.match(/"(.+)"/);
+    var current_start = processed_msg.search(/"(.+)"/);
+
+    while(current_start != -1)
+    {
+      processed_msg = processed_msg.replace(quote_region[0], "<span class = \'quote\'>"+quote_region[1]+"</span>"); 
+
+      quote_region = processed_msg.match(/"(.+)"/);
+      current_start = processed_msg.search(/"(.+)"/);
+    }
+
+    sanitize_before = true; 
+  }
+  if (processed_msg.substr(0, 5) == '/roll') addMessage(message.nick, processed_msg.substring(6), message.timestamp, "action", false);
+  else if (processed_msg.substr(0, 3) == '/me') addMessage(message.nick, processed_msg.substring(4), message.timestamp, "action", !sanitize_before);
+  else addMessage(message.nick, processed_msg, message.timestamp, "action", !sanitize_before);
+
+}
+
 
 //process updates if we have any, request updates from the server,
 // and call again with response. the last part is like recursion except the call
@@ -289,7 +378,8 @@ function longPoll (data) {
           if(!CONFIG.focus){
             CONFIG.unread++;
           }
-          addMessage(message.nick, message.text, message.timestamp);
+	  if (is_special_action(message.text)) handle_special_action(message); 
+          else addMessage(message.nick, message.text, message.timestamp);
           break;
 
         case "join":
@@ -437,7 +527,11 @@ $(document).ready(function() {
   $("#entry").keypress(function (e) {
     if (e.keyCode != 13 /* Return */) return;
     var msg = $("#entry").attr("value").replace("\n", "");
-    if (!util.isBlank(msg)) send(msg);
+    if (!util.isBlank(msg))
+    {
+      if (is_special_action(msg)) send(process_special_action(msg));
+      else send(msg);
+    }
     $("#entry").attr("value", ""); // clear the entry field.
   });
 

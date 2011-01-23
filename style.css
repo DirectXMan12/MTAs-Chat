@@ -84,9 +84,79 @@ a:hover { text-decoration: underline; color: #aaa; }
   vertical-align: top;
 }
 
+.msg-text > span.quote::before
+{
+  content:open-quote;
+  font-size: 15pt;
+  margin-right: 4px;
+}
+.msg-text > span.quote::after
+{
+  content:close-quote;
+  font-size: 15pt;
+  margin-left: 4px;
+}
+
 .nick { 
   font-weight: bold;
   padding: 0 1em 0 0.5em;
+}
+
+.message:not(.action):not(.notice):not(.join) .msg-text::before
+{
+  content:open-quote;
+  font-size: 15pt;
+  margin-right: 4px;
+}
+
+.message:not(.action):not(.notice):not(.join) .msg-text::after
+{
+  content:close-quote;
+  font-size: 15pt;
+  margin-left: 4px;
+}
+
+.message.action .nick
+{
+  padding: 0 0 0 0.5em;
+  font-style: oblique;
+}
+
+.message.action .nick::after
+{
+  content: "\00a0";
+}
+
+.message.action .msg-text
+{
+  font-style: oblique;
+}
+
+span.dice
+{
+  font-style: italic;
+}
+
+span.dice.success
+{
+  color: #00FF00;
+  font-size: 16.5pt;
+}
+
+span.dice.great.success::after
+{
+  content: "\0000a0\002192";
+  color: #00f;
+}
+
+span.dice.non_success
+{
+  color: #FFFF77;
+}
+
+span.dice.failure
+{
+  color: #FF0000;
 }
 
 .nick a {
