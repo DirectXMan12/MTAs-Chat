@@ -1,21 +1,45 @@
 var net = require("net"),
 		sys = require("sys");
 
+var irc = exports;
+
 // a quick client for basic IRC
 // (see example below)
-function irc_client(server, port, ondatafunc)
+irc.irc_client = function (server, port, ondatafunc)
 {
 	this.conn = net.createConnection(port, server);
 	this.ondata = ondatafunc;
 	this.autopong = true;
+	this._buffered_messages = [];
+	this._inited = false;
 	this.send = function(command, payload)
 	{
+		if (!this._inited)
+		{
+			this._buffered_messages.push({c: command, p: payload});
+			return;
+			sys.puts("buffering");
+		}
 		this.conn.write(command + " " + payload + "\r\n");
+		if (command == "QUIT") this.conn.end();
+		//sys.puts(command + " " + payload);
 	};
 	this.login = function(nick, user_string)
 	{
+		//sys.puts('logging in with "NICK '+nick+'" and "USER '+user_string+'"');
+		this._inited = true;
 		this.send('NICK', nick);
 		this.send('USER', user_string);
+
+		if (this._buffered_messages.length > 0)
+		{
+			var msg = this._buffered_messages.shift();
+			while (msg != undefined)
+			{
+				this.send(msg.c, msg.p);
+				msg = this._buffered_messages.shift();
+			}
+		}
 	};
 	this.pong = function(server) { this.send('PONG', server); };
 	this._ondata = function(data)

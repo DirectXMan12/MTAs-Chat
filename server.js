@@ -1,5 +1,6 @@
 HOST = null; // localhost
 PORT = 8001;
+CHANNEL_NAME = "mtas_irc";
 
 // when the daemon started
 var starttime = (new Date()).getTime();
@@ -14,7 +15,8 @@ setInterval(function () {
 var fu = require("./fu"),
     sys = require("sys"),
     url = require("url"),
-    qs = require("querystring");
+    qs = require("querystring"),
+		irc = require("./testirc") ;
 
 var MESSAGE_BACKLOG = 200,
     SESSION_TIMEOUT = 60 * 1000;
@@ -23,7 +25,7 @@ var channel = new function () {
   var messages = [],
       callbacks = [];
 
-  this.appendMessage = function (nick, type, text) {
+  this.appendMessage = function (nick, s, type, text) {
     var m = { nick: nick
             , type: type // "msg", "join", "part"
             , text: text
@@ -43,6 +45,21 @@ var channel = new function () {
     }
 
     messages.push( m );
+		type = type.toUpperCase();
+		switch (type)
+		{
+			case "JOIN":
+				text = "#"+CHANNEL_NAME;
+				break;
+			case "PART":
+				text = "#"+CHANNEL_NAME;
+				break;
+			case "MSG":
+				type = 'PRIVMSG #'+CHANNEL_NAME;
+				break;
+		}
+		s.irc_channel.send(type, text);
+		if (type == "PART") s.irc_channel.send("QUIT", '');
 
     while (callbacks.length > 0) {
       callbacks.shift().callback([m]);
@@ -98,9 +115,15 @@ function createSession (nick) {
     },
 
     destroy: function () {
-      channel.appendMessage(session.nick, "part");
+      channel.appendMessage(session.nick, session, "part");
       delete sessions[session.id];
-    }
+    },
+		irc_inited: false,
+		irc_channel: new irc.irc_client('localhost', 6667, function(data)
+			{
+				if (!session.irc_inited) { session.irc_channel.login(session.nick, session.nick + ' 8 * :'+session.nick+' web user'); session.irc_inited = true; }
+				sys.puts(data);
+			})
   };
 
   sessions[session.id] = session;
@@ -154,7 +177,7 @@ fu.get("/join", function (req, res) {
 
   //sys.puts("connection: " + nick + "@" + res.connection.remoteAddress);
 
-  channel.appendMessage(session.nick, "join");
+  channel.appendMessage(session.nick, session, "join");
   res.simpleJSON(200, { id: session.id
                       , nick: session.nick
                       , rss: mem.rss
@@ -204,6 +227,6 @@ fu.get("/send", function (req, res) {
 
   session.poke();
 
-  channel.appendMessage(session.nick, "msg", text);
+  channel.appendMessage(session.nick, session, "msg", text);
   res.simpleJSON(200, { rss: mem.rss });
 });
