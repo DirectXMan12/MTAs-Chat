@@ -21,6 +21,8 @@ var fu = require("./fu"),
 var MESSAGE_BACKLOG = 200,
     SESSION_TIMEOUT = 60 * 1000;
 
+var LISTENER;
+
 var channel = new function () {
   var messages = [],
       callbacks = [];
@@ -150,6 +152,35 @@ fu.get("/style.css", fu.staticHandler("style.css"));
 fu.get("/client.js", fu.staticHandler("client.js"));
 fu.get("/jquery-1.2.6.min.js", fu.staticHandler("jquery-1.2.6.min.js"));
 
+LISTENER = new irc.irc_client('localhost', 6667, function(data)
+    {
+      if(!LISTENER._inited) LISTENER.login('mtas_listener', 'mtas_listener 8 * :listens to the mtas_irc channel for webclients');
+      var data_parts = data.split(' ', 3);
+      var user_parts = data_parts[0].split('!');
+
+      var type = "";
+      var text = undefined;
+      var known = true;
+
+      switch(data_parts[1])
+      {
+        case 'JOIN':
+          type = 'join';
+          break;
+        case 'PART':
+          type = 'part';
+          break;
+        case 'PRIVMSG'
+          type = 'msg';
+          text = data_parts[2].substr(1);
+          break;
+        default:
+          known = false;
+          break;
+      }
+
+      if (known) channel.appendMessage(user_parts[0], undefined, type, text); 
+    });
 
 fu.get("/who", function (req, res) {
   var nicks = [];
