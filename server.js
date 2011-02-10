@@ -58,6 +58,8 @@ var channel = new function () {
 				break;
 			case "MSG":
 				type = 'PRIVMSG #'+CHANNEL_NAME;
+				if (text.substr(0, 3) == '/me') text = "\001ACTION " + text.substr(4) + "\001";
+				else if (text.substr(0, 5) == '/roll') text = "\001ACTION " + text.substr(6) + "\001";
 				text = ':'+text;
 				break;
 		}
