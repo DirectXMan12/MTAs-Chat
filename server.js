@@ -158,7 +158,7 @@ fu.get("/jquery-1.2.6.min.js", fu.staticHandler("jquery-1.2.6.min.js"));
 LISTENER = new irc.irc_client('localhost', 6667, function(data)
     {
       if(!LISTENER._inited) { LISTENER.login('mtas_listener', 'mtas_listener 8 * :listens to the mtas_irc channel for webclients'); LISTENER.send('JOIN', '#'+CHANNEL_NAME); }
-      var data_parts = data.toString().split(' ', 4);
+      var data_parts = data.toString().split(' ');
       var user_parts = data_parts[0].split('!');
 
       var type = "";
@@ -176,12 +176,13 @@ LISTENER = new irc.irc_client('localhost', 6667, function(data)
 				case 'PRIVMSG':
           type = 'msg';
           text = data_parts[3].substr(1);
+					for (var i = 4; i < data_parts.length; i++) text += ' ' + data_parts[i];
           break;
         default:
           known = false;
           break;
       }
-
+			
 			var nick = user_parts[0].substr(1);	
 			for (var i in sessions)
 			{
