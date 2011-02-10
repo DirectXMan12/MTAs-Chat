@@ -60,8 +60,8 @@ var channel = new function () {
 				type = 'PRIVMSG #'+CHANNEL_NAME;
 				break;
 		}
-		s.irc_channel.send(type, text);
-		if (type == "PART") s.irc_channel.send("QUIT", '');
+		if (s != undefined) s.irc_channel.send(type, text);
+		if (type == "PART" && s != undefined) s.irc_channel.send("QUIT", '');
 
     while (callbacks.length > 0) {
       callbacks.shift().callback([m]);
@@ -124,7 +124,7 @@ function createSession (nick) {
 		irc_channel: new irc.irc_client('localhost', 6667, function(data)
 			{
 				if (!session.irc_inited) { session.irc_channel.login(session.nick, session.nick + ' 8 * :'+session.nick+' web user'); session.irc_inited = true; }
-				sys.puts(data);
+				//sys.puts(data);
 			})
   };
 
@@ -154,8 +154,8 @@ fu.get("/jquery-1.2.6.min.js", fu.staticHandler("jquery-1.2.6.min.js"));
 
 LISTENER = new irc.irc_client('localhost', 6667, function(data)
     {
-      if(!LISTENER._inited) LISTENER.login('mtas_listener', 'mtas_listener 8 * :listens to the mtas_irc channel for webclients');
-      var data_parts = data.split(' ', 3);
+      if(!LISTENER._inited) { LISTENER.login('mtas_listener', 'mtas_listener 8 * :listens to the mtas_irc channel for webclients'); LISTENER.send('JOIN', '#'+CHANNEL_NAME); }
+      var data_parts = data.toString().split(' ', 4);
       var user_parts = data_parts[0].split('!');
 
       var type = "";
@@ -170,16 +170,24 @@ LISTENER = new irc.irc_client('localhost', 6667, function(data)
         case 'PART':
           type = 'part';
           break;
-        case 'PRIVMSG'
+				case 'PRIVMSG':
           type = 'msg';
-          text = data_parts[2].substr(1);
+          text = data_parts[3].substr(1);
           break;
         default:
           known = false;
           break;
       }
 
-      if (known) channel.appendMessage(user_parts[0], undefined, type, text); 
+			var nick = user_parts[0].substr(1);	
+			for (var i in sessions)
+			{
+				var session = sessions[i];
+				if (session && session.nick === nick) known = false;
+			}
+
+      if (known) { channel.appendMessage(nick, undefined, type, text); }
+			//else sys.puts('unknown command - ' + data.toString().substr(0,20));
     });
 
 fu.get("/who", function (req, res) {
