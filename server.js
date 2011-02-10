@@ -58,6 +58,7 @@ var channel = new function () {
 				break;
 			case "MSG":
 				type = 'PRIVMSG #'+CHANNEL_NAME;
+				text = ':'+text;
 				break;
 		}
 		if (s != undefined) s.irc_channel.send(type, text);

@@ -17,12 +17,12 @@ irc.irc_client = function (server, port, ondatafunc)
 		if (!this._inited)
 		{
 			this._buffered_messages.push({c: command, p: payload});
-			return;
 			sys.puts("buffering");
+			return;
 		}
 		this.conn.write(command + " " + payload + "\r\n");
 		if (command == "QUIT") this.conn.end();
-		//sys.puts(command + " " + payload);
+		sys.puts('irc: "' + command + " " + payload + '"');
 	};
 	this.login = function(nick, user_string)
 	{
