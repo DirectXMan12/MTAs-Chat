@@ -176,6 +176,7 @@ LISTENER = new irc.irc_client('localhost', 6667, function(data)
 				case 'PRIVMSG':
           type = 'msg';
           text = data_parts[3].substr(1);
+          if (text.substr(0,7) == "\001ACTION") { text = text.substring(7,-2); text = '/me' + text; }
 					for (var i = 4; i < data_parts.length; i++) text += ' ' + data_parts[i];
           break;
         default:
