@@ -1,4 +1,4 @@
-a browser based client and ["node.js":http://nodejs.org]-based chat server designed for playing games of _Mage: The Ascension_ over the internet.
+a browser based client and ["node.js":http://nodejs.org]-based chat server designed for playing games of _Mage: The Ascension_ over the internet via a combination of IRC(Internet Relay Chat) and standard client-server asynchronous requests.
 
 based on "chat.nodejs.org":http://chat.nodejs.org
 
